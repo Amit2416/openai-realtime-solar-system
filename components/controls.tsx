@@ -1,9 +1,11 @@
 import React from "react";
 import { Mic, MicOff, Wifi } from "lucide-react";
+import "./controls.css";
 
 interface ControlsProps {
   isConnected: boolean;
   isListening: boolean;
+  isSpeaking: boolean;
   handleConnectClick: () => void;
   handleMicToggleClick: () => void;
 }
@@ -11,6 +13,7 @@ interface ControlsProps {
 const Controls: React.FC<ControlsProps> = ({
   isConnected,
   isListening,
+  isSpeaking,
   handleConnectClick,
   handleMicToggleClick,
 }) => {
@@ -38,6 +41,7 @@ const Controls: React.FC<ControlsProps> = ({
           <MicOff className="h-6 w-6 text-red-500" />
         )}
       </div>
+      <div className={`animation-circle ${isListening ? 'listening' : ''} ${isSpeaking ? 'speaking' : ''}`}></div>
     </div>
   );
 };

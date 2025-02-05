@@ -1,23 +1,17 @@
 "use client";
 
 import Controls from "@/components/controls";
-import Scene from "@/components/scene";
 import Logs from "@/components/logs";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { INSTRUCTIONS, TOOLS } from "@/lib/config";
 import { BASE_URL, MODEL } from "@/lib/constants";
 
-type ToolCallOutput = {
-  response: string;
-  [key: string]: any;
-};
-
 export default function App() {
   const [logs, setLogs] = useState<any[]>([]);
-  const [toolCall, setToolCall] = useState<any>(null);
   const [isSessionStarted, setIsSessionStarted] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -191,49 +185,6 @@ export default function App() {
 
   // Attach event listeners to the data channel when a new one is created
   useEffect(() => {
-    async function handleToolCall(output: any) {
-      const toolCall = {
-        name: output.name,
-        arguments: output.arguments,
-      };
-      console.log("Tool call:", toolCall);
-      setToolCall(toolCall);
-
-      // TOOL CALL HANDLING
-      // Initialize toolCallOutput with a default response
-      const toolCallOutput: ToolCallOutput = {
-        response: `Tool call ${toolCall.name} executed successfully.`,
-      };
-
-      // Handle special tool calls
-      if (toolCall.name === "get_iss_position") {
-        const issPosition = await fetch("/api/iss").then((response) =>
-          response.json()
-        );
-        console.log("ISS position:", issPosition);
-        toolCallOutput.issPosition = issPosition;
-      }
-
-      sendClientEvent({
-        type: "conversation.item.create",
-        item: {
-          type: "function_call_output",
-          call_id: output.call_id,
-          output: JSON.stringify(toolCallOutput),
-        },
-      });
-
-      // Force a model response to make sure it responds after certain tool calls
-      if (
-        toolCall.name === "get_iss_position" ||
-        toolCall.name === "display_data"
-      ) {
-        sendClientEvent({
-          type: "response.create",
-        });
-      }
-    }
-
     if (dataChannel) {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
@@ -241,9 +192,8 @@ export default function App() {
         if (event.type === "response.done") {
           const output = event.response.output[0];
           setLogs((prev) => [output, ...prev]);
-          if (output?.type === "function_call") {
-            handleToolCall(output);
-          }
+          setIsSpeaking(true);
+          setTimeout(() => setIsSpeaking(false), 1000);
         }
       });
 
@@ -288,12 +238,12 @@ export default function App() {
 
   return (
     <div className="relative size-full">
-      <Scene toolCall={toolCall} />
       <Controls
         handleConnectClick={handleConnectClick}
         handleMicToggleClick={handleMicToggleClick}
         isConnected={isSessionActive}
         isListening={isListening}
+        isSpeaking={isSpeaking}
       />
       <Logs messages={logs} />
     </div>
